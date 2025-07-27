@@ -1,0 +1,94 @@
+﻿@model IEnumerable<SalesCrmDashboard.Models.Product>
+
+@{
+    ViewData["Title"] = "Products";
+}
+
+<div class="row">
+    <div class="col-12">
+        <h1 class="mb-4">
+            <i class="bi bi-box"></i> Products
+        </h1>
+    </div>
+</div>
+
+<!-- Search and Filter -->
+<div class="card mb-4">
+    <div class="card-body">
+        <form asp-action="Index" method="get">
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="input-group">
+                        <input type="text" name="searchString" value="@ViewBag.CurrentFilter" class="form-control" placeholder="Search products..." />
+                        <button type="submit" class="btn btn-outline-secondary">
+                            <i class="bi bi-search"></i> Search
+                        </button>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="btn-group" role="group">
+                        <a asp-action="Index" asp-route-sortOrder="@ViewBag.NameSortParm" asp-route-searchString="@ViewBag.CurrentFilter" class="btn btn-outline-primary btn-sm">
+                            <i class="bi bi-sort-alpha-down"></i> Name
+                        </a>
+                        <a asp-action="Index" asp-route-sortOrder="@ViewBag.PriceSortParm" asp-route-searchString="@ViewBag.CurrentFilter" class="btn btn-outline-primary btn-sm">
+                            <i class="bi bi-currency-dollar"></i> Price
+                        </a>
+                        <a asp-action="Index" asp-route-sortOrder="@ViewBag.CategorySortParm" asp-route-searchString="@ViewBag.CurrentFilter" class="btn btn-outline-primary btn-sm">
+                            <i class="bi bi-tag"></i> Category
+                        </a>
+                        <a asp-action="Index" asp-route-sortOrder="@ViewBag.SalesSortParm" asp-route-searchString="@ViewBag.CurrentFilter" class="btn btn-outline-primary btn-sm">
+                            <i class="bi bi-graph-up"></i> Sales
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card shadow">
+    <div class="card-header py-3">
+        <h6 class="m-0 font-weight-bold text-primary">Product Catalog</h6>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-bordered" width="100%" cellspacing="0">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Product Name</th>
+                        <th>Product Number</th>
+                        <th>Category</th>
+                        <th>Color</th>
+                        <th>Standard Cost</th>
+                        <th>List Price</th>
+                        <th>Qty Sold</th>
+                        <th>Revenue</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var product in Model)
+                    {
+                        <tr>
+                            <td>@product.ProductID</td>
+                            <td>@product.Name</td>
+                            <td>@product.ProductNumber</td>
+                            <td>@(product.CategoryName ?? "-")</td>
+                            <td>@(product.Color ?? "-")</td>
+                            <td>@product.StandardCost.ToString("C")</td>
+                            <td>@product.ListPrice.ToString("C")</td>
+                            <td>@((product.QuantitySold ?? 0).ToString("N0"))</td>
+                            <td>@((product.TotalRevenue ?? 0).ToString("C"))</td>
+                            <td>
+                                <a asp-action="Details" asp-route-id="@product.ProductID" class="btn btn-sm btn-outline-primary">
+                                    <i class="bi bi-eye"></i> View
+                                </a>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>

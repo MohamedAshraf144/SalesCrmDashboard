@@ -1,0 +1,385 @@
+﻿// =====================================
+// 🔧 TROUBLESHOOTING THE LOGIN ISSUE
+// =====================================
+
+// =====================================
+// 📄 Updated Controllers/AccountController.cs
+// =====================================
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Mvc;
+using System.Security.Claims;
+
+namespace SalesCrmDashboard.Controllers
+{
+    public class AccountController : Controller
+    {
+        private readonly ILogger<AccountController>
+    _logger;
+
+    public AccountController(ILogger<AccountController>
+        logger)
+        {
+        _logger = logger;
+        }
+
+        [HttpGet]
+        public IActionResult Login(string? returnUrl = null)
+        {
+        ViewBag.ReturnUrl = returnUrl;
+        return View();
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult>
+            Login(string username, string password, string? returnUrl = null)
+            {
+            try
+            {
+            _logger.LogInformation("Login attempt for username: {Username}", username);
+
+            // Trim whitespace and validate input
+            username = username?.Trim() ?? "";
+            password = password?.Trim() ?? "";
+
+            if (string.IsNullOrEmpty(username) || string.IsNullOrEmpty(password))
+            {
+            ViewBag.Error = "Please enter both username and password";
+            ViewBag.ReturnUrl = returnUrl;
+            return View();
+            }
+
+            // Simple hardcoded authentication - replace with your authentication logic
+            // Check multiple variations to be more flexible
+            bool isValidUser = (username.Equals("admin", StringComparison.OrdinalIgnoreCase) &&
+            password == "admin123") ||
+            (username.Equals("administrator", StringComparison.OrdinalIgnoreCase) &&
+            password == "admin123") ||
+            (username.Equals("demo", StringComparison.OrdinalIgnoreCase) &&
+            password == "demo123");
+
+            if (isValidUser)
+            {
+            var claims = new List<Claim>
+                {
+                new Claim(ClaimTypes.Name, username),
+                new Claim(ClaimTypes.Role, "Admin"),
+                new Claim("DisplayName", username)
+                };
+
+                var claimsIdentity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
+                var authProperties = new AuthenticationProperties
+                {
+                IsPersistent = true,
+                ExpiresUtc = DateTimeOffset.UtcNow.AddHours(8),
+                AllowRefresh = true
+                };
+
+                await HttpContext.SignInAsync(
+                CookieAuthenticationDefaults.AuthenticationScheme,
+                new ClaimsPrincipal(claimsIdentity),
+                authProperties);
+
+                _logger.LogInformation("Successful login for user: {Username}", username);
+
+                // Redirect logic
+                if (!string.IsNullOrEmpty(returnUrl) && Url.IsLocalUrl(returnUrl))
+                {
+                return Redirect(returnUrl);
+                }
+
+                return RedirectToAction("Index", "Home");
+                }
+                else
+                {
+                _logger.LogWarning("Failed login attempt for username: {Username}", username);
+                ViewBag.Error = "Invalid username or password. Please try: admin / admin123";
+                ViewBag.ReturnUrl = returnUrl;
+                return View();
+                }
+                }
+                catch (Exception ex)
+                {
+                _logger.LogError(ex, "Error during login process");
+                ViewBag.Error = "An error occurred during login. Please try again.";
+                ViewBag.ReturnUrl = returnUrl;
+                return View();
+                }
+                }
+
+                public async Task<IActionResult>
+                    Logout()
+                    {
+                    try
+                    {
+                    await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+                    _logger.LogInformation("User logged out successfully");
+                    return RedirectToAction("Index", "Home");
+                    }
+                    catch (Exception ex)
+                    {
+                    _logger.LogError(ex, "Error during logout");
+                    return RedirectToAction("Index", "Home");
+                    }
+                    }
+
+                    public IActionResult AccessDenied()
+                    {
+                    return View();
+                    }
+                    }
+                    }
+
+                    // =====================================
+                    // 📄 Updated Program.cs (Authentication Configuration)
+                    // =====================================
+                    using Microsoft.AspNetCore.Authentication.Cookies;
+                    using SalesCrmDashboard.Data;
+                    using SalesCrmDashboard.Data.Interfaces;
+                    using SalesCrmDashboard.Data.Repositories;
+
+                    var builder = WebApplication.CreateBuilder(args);
+
+                    // Add services to the container
+                    builder.Services.AddControllersWithViews();
+
+                    // Add antiforgery services
+                    builder.Services.AddAntiforgery(options =>
+                    {
+                    options.HeaderName = "X-CSRF-TOKEN";
+                    });
+
+                    // Register DapperContext
+                    builder.Services.AddSingleton<DapperContext>
+                        ();
+
+                        // Register repositories
+                        builder.Services.AddScoped<ICustomerRepository, CustomerRepository>
+                            ();
+                            builder.Services.AddScoped<IProductRepository, ProductRepository>
+                                ();
+                                builder.Services.AddScoped<IOrderRepository, OrderRepository>
+                                    ();
+                                    builder.Services.AddScoped<IDashboardRepository, DashboardRepository>
+                                        ();
+
+                                        // Add authentication with detailed configuration
+                                        builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
+                                        .AddCookie(options =>
+                                        {
+                                        options.LoginPath = "/Account/Login";
+                                        options.LogoutPath = "/Account/Logout";
+                                        options.AccessDeniedPath = "/Account/AccessDenied";
+                                        options.ExpireTimeSpan = TimeSpan.FromHours(8);
+                                        options.SlidingExpiration = true;
+                                        options.Cookie.Name = "SalesCrmAuth";
+                                        options.Cookie.HttpOnly = true;
+                                        options.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
+                                        options.ReturnUrlParameter = "returnUrl";
+                                        });
+
+                                        // Add session if needed
+                                        builder.Services.AddSession(options =>
+                                        {
+                                        options.IdleTimeout = TimeSpan.FromMinutes(30);
+                                        options.Cookie.HttpOnly = true;
+                                        options.Cookie.IsEssential = true;
+                                        });
+
+                                        var app = builder.Build();
+
+                                        // Configure the HTTP request pipeline
+                                        if (!app.Environment.IsDevelopment())
+                                        {
+                                        app.UseExceptionHandler("/Home/Error");
+                                        app.UseHsts();
+                                        }
+
+                                        app.UseHttpsRedirection();
+                                        app.UseStaticFiles();
+
+                                        app.UseRouting();
+
+                                        // Add session middleware
+                                        app.UseSession();
+
+                                        // Authentication & Authorization middleware (order matters!)
+                                        app.UseAuthentication();
+                                        app.UseAuthorization();
+
+                                        app.MapControllerRoute(
+                                        name: "default",
+                                        pattern: "{controller=Home}/{action=Index}/{id?}");
+
+                                        app.Run();
+
+                                        // =====================================
+                                        // 📄 Updated Views/Account/Login.cshtml
+                                        // =====================================
+                                        /*
+@{
+    ViewData["Title"] = "Login";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+                                        <div class="row justify-content-center">
+                                            <div class="col-xl-6 col-lg-8 col-md-9">
+                                                <div class="card o-hidden border-0 shadow-lg my-5">
+                                                    <div class="card-body p-0">
+                                                        <div class="row">
+                                                            <div class="col-lg-12">
+                                                                <div class="p-5">
+                                                                    <div class="text-center">
+                                                                        <h1 class="h4 text-gray-900 mb-4">Welcome Back!</h1>
+                                                                    </div>
+
+                                                                    @if (ViewBag.Error != null)
+                                                                    {
+                                                                        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                                                                            <i class="bi bi-exclamation-triangle"></i> @ViewBag.Error
+                                                                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                                                                        </div>
+                                                                    }
+
+                                                                    <form method="post" class="user">
+                                                                        @Html.AntiForgeryToken()
+
+                                                                        <div class="form-group mb-3">
+                                                                            <label for="username" class="form-label">Username</label>
+                                                                            <input type="text"
+                                                                                   id="username"
+                                                                                   name="username"
+                                                                                   class="form-control form-control-user"
+                                                                                   placeholder="Enter Username..."
+                                                                                   value="admin"
+                                                                                   required
+                                                                                   autocomplete="username">
+                                                                        </div>
+
+                                                                        <div class="form-group mb-3">
+                                                                            <label for="password" class="form-label">Password</label>
+                                                                            <input type="password"
+                                                                                   id="password"
+                                                                                   name="password"
+                                                                                   class="form-control form-control-user"
+                                                                                   placeholder="Password"
+                                                                                   value="admin123"
+                                                                                   required
+                                                                                   autocomplete="current-password">
+                                                                        </div>
+
+                                                                        <input type="hidden" name="returnUrl" value="@ViewBag.ReturnUrl" />
+
+                                                                        <button type="submit" class="btn btn-primary btn-user btn-block w-100 mb-3">
+                                                                            <i class="bi bi-box-arrow-in-right"></i> Login
+                                                                        </button>
+                                                                    </form>
+
+                                                                    <hr>
+
+                                                                    <div class="text-center">
+                                                                        <div class="alert alert-info">
+                                                                            <strong>Demo Credentials:</strong><br>
+                                                                            <code>Username: admin</code><br>
+                                                                            <code>Password: admin123</code>
+                                                                        </div>
+                                                                        <small class="text-muted">
+                                                                            Alternative: demo / demo123
+                                                                        </small>
+                                                                    </div>
+
+                                                                    <!-- Quick Login Buttons for Demo -->
+                                                                    <div class="text-center mt-3">
+                                                                        <button type="button" class="btn btn-outline-secondary btn-sm" onclick="quickLogin()">
+                                                                            <i class="bi bi-lightning"></i> Quick Demo Login
+                                                                        </button>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <script>
+                                            function quickLogin() {
+                                                document.getElementById('username').value = 'admin';
+                                                document.getElementById('password').value = 'admin123';
+                                                document.querySelector('form').submit();
+                                            }
+
+                                            // Auto-focus on username field
+                                            document.addEventListener('DOMContentLoaded', function() {
+                                                const usernameField = document.getElementById('username');
+                                                if (usernameField && !usernameField.value) {
+                                                    usernameField.focus();
+                                                }
+                                            });
+                                        </script>
+
+                                        <style>
+                                            .form-control-user {
+                                                font-size: 0.9rem;
+                                                border-radius: 10rem;
+                                                padding: 1.2rem 1rem;
+                                            }
+
+                                            .btn-user {
+                                                font-size: 0.9rem;
+                                                border-radius: 10rem;
+                                                padding: 0.75rem 1rem;
+                                            }
+
+                                            .card {
+                                                box-shadow: 0 0 2rem 0 rgba(136, 152, 170, 0.15);
+                                            }
+
+                                            .alert-info {
+                                                background-color: #d1ecf1;
+                                                border-color: #bee5eb;
+                                                color: #0c5460;
+                                            }
+                                        </style>
+                                        */
+
+                                        // =====================================
+                                        // 🔍 DEBUGGING STEPS TO IDENTIFY THE ISSUE
+                                        // =====================================
+
+                                        // 1. Add logging to see what's happening
+                                        // Add this to your appsettings.json:
+                                        /*
+                                        {
+                                        "Logging": {
+                                        "LogLevel": {
+                                        "Default": "Information",
+                                        "Microsoft.AspNetCore": "Warning",
+                                        "SalesCrmDashboard.Controllers.AccountController": "Debug"
+                                        }
+                                        }
+                                        }
+                                        */
+
+                                        // 2. Check browser developer tools:
+                                        // - Open F12 Developer Tools
+                                        // - Go to Network tab
+                                        // - Try to login and see if the POST request is being sent
+                                        // - Check for any 400/500 errors
+
+                                        // 3. Verify the form is posting correctly:
+                                        // Add this JavaScript to login page for debugging:
+                                        /*
+                                        <script>
+                                            document.querySelector('form').addEventListener('submit', function(e) {
+                                                const username = document.querySelector('[name="username"]').value;
+                                                const password = document.querySelector('[name="password"]').value;
+                                                console.log('Form submitting with:', { username, password });
+
+                                                if (!username || !password) {
+                                                    e.preventDefault();
+                                                    alert('Please fill in both fields');
+                                                }
+                                            });
+                                        </script>

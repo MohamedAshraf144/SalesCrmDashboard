@@ -1,0 +1,186 @@
+﻿@model SalesCrmDashboard.Models.ViewModels.CustomerDetailsViewModel
+
+@{
+    ViewData["Title"] = "Customer Details";
+}
+
+<div class="row">
+    <div class="col-12">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a asp-controller="Customers" asp-action="Index">Customers</a></li>
+                <li class="breadcrumb-item active">@Model.Customer.DisplayName</li>
+            </ol>
+        </nav>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Customer Information -->
+    <div class="col-xl-4 col-lg-5">
+        <div class="card shadow mb-4">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">
+                    <i class="bi bi-person"></i> Customer Information
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-sm-6"><strong>ID:</strong></div>
+                    <div class="col-sm-6">@Model.Customer.CustomerID</div>
+                </div>
+                <hr>
+                <div class="row">
+                    <div class="col-sm-6"><strong>Name:</strong></div>
+                    <div class="col-sm-6">@Model.Customer.FullName</div>
+                </div>
+                @if (!string.IsNullOrEmpty(Model.Customer.CompanyName))
+                {
+                    <hr>
+                    <div class="row">
+                        <div class="col-sm-6"><strong>Company:</strong></div>
+                        <div class="col-sm-6">@Model.Customer.CompanyName</div>
+                    </div>
+                }
+                @if (!string.IsNullOrEmpty(Model.Customer.EmailAddress))
+                {
+                    <hr>
+                    <div class="row">
+                        <div class="col-sm-6"><strong>Email:</strong></div>
+                        <div class="col-sm-6">
+                            <a href="mailto:@Model.Customer.EmailAddress">@Model.Customer.EmailAddress</a>
+                        </div>
+                    </div>
+                }
+                @if (!string.IsNullOrEmpty(Model.Customer.Phone))
+                {
+                    <hr>
+                    <div class="row">
+                        <div class="col-sm-6"><strong>Phone:</strong></div>
+                        <div class="col-sm-6">@Model.Customer.Phone</div>
+                    </div>
+                }
+                @if (!string.IsNullOrEmpty(Model.Customer.SalesPerson))
+                {
+                    <hr>
+                    <div class="row">
+                        <div class="col-sm-6"><strong>Sales Person:</strong></div>
+                        <div class="col-sm-6">@Model.Customer.SalesPerson</div>
+                    </div>
+                }
+            </div>
+        </div>
+
+        <!-- Customer Statistics -->
+        <div class="card shadow mb-4">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">
+                    <i class="bi bi-graph-up"></i> Customer Statistics
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-sm-6"><strong>Total Orders:</strong></div>
+                    <div class="col-sm-6">@Model.TotalOrders</div>
+                </div>
+                <hr>
+                <div class="row">
+                    <div class="col-sm-6"><strong>Total Value:</strong></div>
+                    <div class="col-sm-6">@Model.TotalOrderValue.ToString("C")</div>
+                </div>
+                @if (Model.LastOrderDate.HasValue)
+                {
+                    <hr>
+                    <div class="row">
+                        <div class="col-sm-6"><strong>Last Order:</strong></div>
+                        <div class="col-sm-6">@Model.LastOrderDate.Value.ToString("MM/dd/yyyy")</div>
+                    </div>
+                }
+                @if (Model.TotalOrders > 0)
+                {
+                    <hr>
+                    <div class="row">
+                        <div class="col-sm-6"><strong>Average Order:</strong></div>
+                        <div class="col-sm-6">@((Model.TotalOrderValue / Model.TotalOrders).ToString("C"))</div>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+
+    <!-- Customer Orders -->
+    <div class="col-xl-8 col-lg-7">
+        <div class="card shadow mb-4">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">
+                    <i class="bi bi-cart"></i> Order History
+                </h6>
+            </div>
+            <div class="card-body">
+                @if (Model.Orders.Any())
+                {
+                    <div class="table-responsive">
+                        <table class="table table-bordered">
+                            <thead>
+                                <tr>
+                                    <th>Order Number</th>
+                                    <th>Order Date</th>
+                                    <th>Due Date</th>
+                                    <th>Status</th>
+                                    <th>Total</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var order in Model.Orders)
+                                {
+                                    <tr>
+                                        <td>@order.SalesOrderNumber</td>
+                                        <td>@order.OrderDate.ToString("MM/dd/yyyy")</td>
+                                        <td>@order.DueDate.ToString("MM/dd/yyyy")</td>
+                                        <td>
+                                            @switch (order.Status)
+                                            {
+                                                case 1:
+                                                    <span class="badge bg-warning">In Process</span>
+                                                    break;
+                                                case 2:
+                                                    <span class="badge bg-info">Approved</span>
+                                                    break;
+                                                case 3:
+                                                    <span class="badge bg-secondary">Backordered</span>
+                                                    break;
+                                                case 4:
+                                                    <span class="badge bg-danger">Rejected</span>
+                                                    break;
+                                                case 5:
+                                                    <span class="badge bg-success">Shipped</span>
+                                                    break;
+                                                case 6:
+                                                    <span class="badge bg-dark">Cancelled</span>
+                                                    break;
+                                                default:
+                                                    <span class="badge bg-light text-dark">Unknown</span>
+                                                    break;
+                                            }
+                                        </td>
+                                        <td>@order.TotalDue.ToString("C")</td>
+                                        <td>
+                                            <a asp-controller="Orders" asp-action="Details" asp-route-id="@order.SalesOrderID" class="btn btn-sm btn-outline-primary">
+                                                <i class="bi bi-eye"></i> View
+                                            </a>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+                else
+                {
+                    <p class="text-muted">No orders found for this customer.</p>
+                }
+            </div>
+        </div>
+    </div>
+</div>

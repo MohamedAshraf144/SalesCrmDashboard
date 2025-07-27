@@ -1,0 +1,61 @@
+﻿@model IEnumerable<SalesCrmDashboard.Models.Customer>
+
+@{
+    ViewData["Title"] = "Customers";
+}
+
+<div class="row">
+    <div class="col-12">
+        <h1 class="mb-4">
+            <i class="bi bi-people"></i> Customers
+        </h1>
+    </div>
+</div>
+
+<div class="card shadow">
+    <div class="card-header py-3">
+        <h6 class="m-0 font-weight-bold text-primary">Customer List</h6>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-bordered" id="dataTable" width="100%" cellspacing="0">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Name</th>
+                        <th>Company</th>
+                        <th>Email</th>
+                        <th>Phone</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var customer in Model)
+                    {
+                        <tr>
+                            <td>@customer.CustomerID</td>
+                            <td>@customer.FullName</td>
+                            <td>@(customer.CompanyName ?? "-")</td>
+                            <td>
+                                @if (!string.IsNullOrEmpty(customer.EmailAddress))
+                                {
+                                    <a href="mailto:@customer.EmailAddress">@customer.EmailAddress</a>
+                                }
+                                else
+                                {
+                                    <span class="text-muted">-</span>
+                                }
+                            </td>
+                            <td>@(customer.Phone ?? "-")</td>
+                            <td>
+                                <a asp-action="Details" asp-route-id="@customer.CustomerID" class="btn btn-sm btn-outline-primary">
+                                    <i class="bi bi-eye"></i> View
+                                </a>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
